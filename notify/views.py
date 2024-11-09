@@ -1,12 +1,22 @@
+from django.http import JsonResponse
 from django.shortcuts import render
+import requests
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view # type: ignore
+from rest_framework.decorators import api_view 
 from django.contrib.auth.models import User
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.hashers import make_password
+
+from .serializers import WeatherDataSerializer
+from .serializers import UserPreferencesSerializer
+from .serializers import HistorySerializer
+from .serializers import LocationSerializer
+from .serializers import SettingsSerializer
+
+from .models import *
 
 from django.core.mail import send_mail
 from django.core.signing import Signer, BadSignature
@@ -96,3 +106,155 @@ def verify_email(request, token):
     
     except (User.DoesNotExist, BadSignature):
         return Response({'error': 'Le lien de vérification est invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_detail(request):
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
+
+# WeatherDataListCreateView
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def weather_data(request):
+    if request.method == 'GET':
+        weather_data = WeatherData.objects.filter(user=request.user)
+        serializer = WeatherDataSerializer(weather_data, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = WeatherDataSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# UserPreferencesView
+@api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def user_preferences(request):
+    try:
+        preferences = UserPreferences.objects.get(user=request.user)
+    except UserPreferences.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = UserPreferencesSerializer(preferences)
+        return Response(serializer.data)
+    
+    elif request.method in ['PUT', 'PATCH']:
+        serializer = UserPreferencesSerializer(preferences, data=request.data, partial=request.method=='PATCH')
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# HistoryListView
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def history_list(request):
+    if request.method == 'GET':
+        history = History.objects.filter(user=request.user)
+        serializer = HistorySerializer(history, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = HistorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# LocationListCreateView
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def location_list(request):
+    if request.method == 'GET':
+        locations = Location.objects.filter(user=request.user)
+        serializer = LocationSerializer(locations, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = LocationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# SettingsListView
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def settings_list(request):
+    settings = Settings.objects.all()
+    serializer = SettingsSerializer(settings, many=True)
+    return Response(serializer.data)
+
+# get_weather (already in FBV style, just adding api_view decorator)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_weather(request):
+    # Get coordinates from request parameters
+    lat = request.data.get('lat')
+    lon = request.data.get('lon')
+    
+    # Validate input parameters
+    if not lat or not lon:
+        return JsonResponse({'error': 'Latitude and longitude are required'}, status=400)
+    
+    try:
+        # Convert to float to validate coordinates
+        lat = float(lat)
+        lon = float(lon)
+        
+        # Validate coordinate ranges
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+            return JsonResponse({'error': 'Invalid coordinate values'}, status=400)
+        
+        # OpenWeatherMap API configuration
+        api_key = settings.OPENWEATHER_API_KEY  # Make sure this is set in your settings.py
+        url = f'http://api.openweathermap.org/data/2.5/weather'
+        
+        # Parameters for the API request
+        params = {
+            'lat': lat,
+            'lon': lon,
+            'appid': api_key,
+            'units': 'Celsius'  # Use metric units (Celsius, meters/sec)
+        }
+        
+        # Make request to OpenWeatherMap API
+        response = requests.get(url, params=params, timeout=5)  # 5 seconds timeout
+        
+        # Check if request was successful
+        response.raise_for_status()
+        
+        # Parse the response
+        weather_data = response.json()
+        
+        # Optional: Format the response to include only needed data
+        formatted_response = {
+            'temperature': weather_data['main']['temp'],
+            'feels_like': weather_data['main']['feels_like'],
+            'humidity': weather_data['main']['humidity'],
+            'pressure': weather_data['main']['pressure'],
+            'weather_description': weather_data['weather'][0]['description'],
+            'wind_speed': weather_data['wind']['speed'],
+            'city_name': weather_data['name'],
+            'country': weather_data['sys']['country']
+        }
+        
+        return JsonResponse(formatted_response)
+        
+    except ValueError:
+        return JsonResponse({'error': 'Invalid coordinate format'}, status=400)
+    except requests.Timeout:
+        return JsonResponse({'error': 'Weather service timeout'}, status=504)
+    except requests.RequestException as e:
+        return JsonResponse({'error': f'Weather service error: {str(e)}'}, status=502)
+    except KeyError as e:
+        return JsonResponse({'error': f'Unexpected response format: {str(e)}'}, status=502)
+    except Exception as e:
+        # Log the unexpected error here
+        return JsonResponse({'error': 'Internal server error'}, status=500)

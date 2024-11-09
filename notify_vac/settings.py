@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-o0zm+y^w#_hl5r=hqb-(qhbhu1ev2h96vw)7os(3k+zv#jt%p*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['api.briceportfolio.me', 'www.api.briceportfolio.me']
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -36,6 +36,7 @@ EMAIL_HOST_USER = 'irumvabric@gmail.com'  # Votre adresse email
 EMAIL_HOST_PASSWORD = 'vngm iosr jylk kklf'  # Votre mot de passe ou mot de passe d'application
 #DEFAULT_FROM_EMAIL = 'noreply@votredomaine.com'
 
+OPENWEATHER_API_KEY = 'f2e5a934bf6e77754ad4c5c1521c0f96'
 
 # print('Email:', EMAIL_HOST_USER)
 
@@ -143,6 +144,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:63391',
+    'http://localhost:61020',
     'http://127.0.0.1:8000',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
