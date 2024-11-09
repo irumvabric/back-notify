@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from notify import views
+from notify import tests
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,5 +33,6 @@ urlpatterns = [
     path('api/user/weather_data/', views.weather_data, name='weather_authenticated_user'),
     path('api/user/location/', views.location_list, name='history_authenticated_user'),
     path('api/user/get_weather_data/', views.get_weather, name='get_weather_for_authenticated_user'),
+    path('api/user/get_weather_data/', tests.TestCase, name='test_weather_for_authenticated_user'),
     path('api/verify-email/<str:token>/', views.verify_email, name='verify-email'),
 ]
