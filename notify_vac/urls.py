@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/user/add_weather_data_history/', views.add_weather_data, name='add_weather_user'),
     path('api/user/location/', views.location_list, name='history_authenticated_user'),
     path('api/user/get_weather_data/', views.get_weather, name='get_weather_for_authenticated_user'),
+    path('api/user/save_weather_data/', views.save_weather_data, name='save_weather_for_authenticated_user'),
     # path('api/user/get_weather_data/', tests.TestCase, name='test_weather_for_authenticated_user'),
     # path('', tests.TestCase, name='test_weather_for_authenticated_user'),
     path('api/verify-email/<str:token>/', views.verify_email, name='verify-email'),

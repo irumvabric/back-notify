@@ -50,18 +50,27 @@ def signup(request):
 
 @api_view(['POST'])
 def add_weather_data(request):
-    location_name = request.data.get('location name')
+    location_name = request.data.get('location_name')
     user_id = request.data.get('user_id')
     weather_data_id = request.data.get('weather_data_id')
 
+    # Fetch user and weather data objects
+    try:
+        user = User.objects.get(id=user_id)
+        weather_data = WeatherData.objects.get(id=weather_data_id)
+    except (User.DoesNotExist, WeatherData.DoesNotExist) as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create History entry
     history = History.objects.create(
-        location_name = location_name,
-        user = user_id,
-        weather_data=weather_data_id 
+        location_name=location_name,
+        user=user,
+        weather_data=weather_data
     )
 
-    return Response({'message': 'Utilisateur créé avec succès. Vérifiez votre email.'}, status=status.HTTP_201_CREATED)
-
+    # Optional: Serialize and return the created History object
+    serializer = HistorySerializer(history)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class UserSerializer(ModelSerializer):
     class Meta:
@@ -264,6 +273,8 @@ def get_weather(request):
             'country': weather_data['sys']['country']
         }
         
+        
+        
         return JsonResponse(formatted_response)
         
     except ValueError:
@@ -277,3 +288,82 @@ def get_weather(request):
     except Exception as e:
         # Log the unexpected error here
         return JsonResponse({'error': 'Internal server error'}, status=500)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_weather_data(request):
+    # Retrieve coordinates from request data
+    lat = request.data.get('lat')
+    lon = request.data.get('lon')
+    location_name = request.data.get('location_name', 'Unknown Location')
+
+    # Validate input parameters
+    if not lat or not lon:
+        return JsonResponse({'error': 'Latitude and longitude are required'}, status=400)
+
+    try:
+        # Convert to float for validation
+        lat = float(lat)
+        lon = float(lon)
+
+        # Validate coordinate ranges
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+            return JsonResponse({'error': 'Invalid coordinate values'}, status=400)
+
+        # OpenWeatherMap API configuration
+        api_key = settings.OPENWEATHER_API_KEY
+        url = 'http://api.openweathermap.org/data/2.5/weather'
+        params = {
+            'lat': lat,
+            'lon': lon,
+            'appid': api_key,
+            'units': 'metric'  # Using metric units (Celsius, meters/sec)
+        }
+
+        # Make request to OpenWeatherMap API
+        response = requests.get(url, params=params, timeout=5)
+        response.raise_for_status()
+
+        # Parse the response
+        weather_data = response.json()
+
+        # Format response data to save in WeatherData model
+        weather_record = {
+            'user': request.user,
+            'location_name': location_name,
+            'temperature': weather_data['main']['temp'],
+            'humidity': weather_data['main']['humidity'],
+            'wind_speed': weather_data['wind']['speed'],
+            'condition': weather_data['weather'][0]['description'],
+        }
+
+        # Save weather data to WeatherData model
+        weather_instance = WeatherData.objects.create(**weather_record)
+        
+        # Optionally serialize and return saved data
+        saved_data = {
+            'id': weather_instance.id,
+            'user': weather_instance.user.id,
+            'location_name': weather_instance.location_name,
+            'temperature': weather_instance.temperature,
+            'humidity': weather_instance.humidity,
+            'wind_speed': weather_instance.wind_speed,
+            'condition': weather_instance.condition,
+            'timestamp': weather_instance.timestamp,
+        }
+
+        return JsonResponse(saved_data, status=status.HTTP_201_CREATED)
+
+    except ValueError:
+        return JsonResponse({'error': 'Invalid coordinate format'}, status=400)
+    except requests.Timeout:
+        return JsonResponse({'error': 'Weather service timeout'}, status=504)
+    except requests.RequestException as e:
+        return JsonResponse({'error': f'Weather service error: {str(e)}'}, status=502)
+    except KeyError as e:
+        return JsonResponse({'error': f'Unexpected response format: {str(e)}'}, status=502)
+    except Exception as e:
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
