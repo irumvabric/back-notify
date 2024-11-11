@@ -46,6 +46,23 @@ def signup(request):
 
     return Response({'message': 'Utilisateur créé avec succès. Vérifiez votre email.'}, status=status.HTTP_201_CREATED)
 
+
+
+@api_view(['POST'])
+def add_weather_data(request):
+    location_name = request.data.get('location name')
+    user_id = request.data.get('user_id')
+    weather_data_id = request.data.get('weather_data_id')
+
+    history = History.objects.create(
+        location_name = location_name,
+        user = user_id,
+        weather_data=weather_data_id 
+    )
+
+    return Response({'message': 'Utilisateur créé avec succès. Vérifiez votre email.'}, status=status.HTTP_201_CREATED)
+
+
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
@@ -130,6 +147,8 @@ def weather_data(request):
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
 
 # UserPreferencesView
 @api_view(['GET', 'PUT', 'PATCH'])
