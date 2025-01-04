@@ -7,7 +7,7 @@ from .models import *
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'first_name','last_name','username', 'email']
 
 
 class WeatherDataSerializer(ModelSerializer):

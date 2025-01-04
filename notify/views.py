@@ -28,14 +28,18 @@ signer = Signer()
 
 @api_view(['POST'])
 def signup(request):
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
     username = request.data.get('username')
     password = request.data.get('password')
     email = request.data.get('email')
 
-    if User.objects.filter(username=username).exists():
+    if User.objects.filter(username=username).exists() and User.objects.filter(email=email).exists():
         return Response({'error': 'Cet utilisateur existe déjà.'}, status=status.HTTP_400_BAD_REQUEST)
 
     user = User.objects.create(
+        first_name = first_name,
+        last_name = last_name,
         username=username,
         password=make_password(password),
         email=email,
@@ -43,6 +47,7 @@ def signup(request):
     )
 
     send_verification_email(user)  # Envoi de l'email de vérification
+
 
     return Response({'message': 'Utilisateur créé avec succès. Vérifiez votre email.'}, status=status.HTTP_201_CREATED)
 
@@ -75,7 +80,7 @@ def add_weather_data(request):
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id','first_name','last_name', 'username', 'email']
 
 @api_view(['GET'])
 def get_users(request):
