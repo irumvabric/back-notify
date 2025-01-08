@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-o0zm+y^w#_hl5r=hqb-(qhbhu1ev2h96vw)7os(3k+zv#jt%p*
 DEBUG = True
 
 # ALLOWED_HOSTS = ['api.briceportfolio.me', 'www.api.briceportfolio.me','127.0.0.1:8000']
-ALLOWED_HOSTS = ['139.162.155.97:8542, localhost']
+ALLOWED_HOSTS = ['139.162.155.97', 'localhost', '127.0.0.1']
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
