@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view
 from django.contrib.auth.models import User
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.hashers import make_password
 
@@ -27,6 +28,7 @@ signer = Signer()
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def signup(request):
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
@@ -83,6 +85,7 @@ class UserSerializer(ModelSerializer):
         fields = ['id','first_name','last_name', 'username', 'email']
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_users(request):
     users = User.objects.all()
     serializer = UserSerializer(users, many=True)
@@ -110,17 +113,26 @@ def update_authenticated_user(request):
 
 
 def send_verification_email(user):
+    # Generate the verification token
     token = signer.sign(user.email)
-    verification_link = f"http://localhost:8000/api/verify-email/{token}"
+
+    # Local and production links
+    local_link = f"http://localhost:8000/api/verify-email/{token}"
+    production_link = f"http://139.162.155.97:8542/api/verify-email/{token}"
     
+    # Construct and send the email with both links
     subject = 'Vérification de votre email'
-    message = f'Cliquez sur le lien suivant pour vérifier votre email : {verification_link}'
+    message = (
+        f'Cliquez sur le lien suivant pour vérifier votre email (environnement local) : {local_link}\n\n'
+        f'Ou utilisez ce lien pour l\'environnement de production : {production_link}'
+    )
     from_email = settings.DEFAULT_FROM_EMAIL
-    
     send_mail(subject, message, from_email, [user.email])
 
 
+
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def verify_email(request, token):
     User = get_user_model()
     

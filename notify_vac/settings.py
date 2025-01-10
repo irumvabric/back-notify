@@ -29,13 +29,26 @@ DEBUG = True
 # ALLOWED_HOSTS = ['api.briceportfolio.me', 'www.api.briceportfolio.me','127.0.0.1:8000']
 ALLOWED_HOSTS = ['139.162.155.97', 'localhost', '127.0.0.1']
 
+# # Local email settings
+# if DEBUG:
+#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Prints emails in the console
+# else:
+#     # Production email settings
+#     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+#     EMAIL_HOST = 'smtp.gmail.com'
+#     EMAIL_PORT = 587
+#     EMAIL_USE_TLS = True
+#     EMAIL_HOST_USER = 'irumvabric@gmail.com'  # Votre adresse email
+#     EMAIL_HOST_PASSWORD = 'vngm iosr jylk kklf'
+
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'irumvabric@gmail.com'  # Votre adresse email
 EMAIL_HOST_PASSWORD = 'vngm iosr jylk kklf'  # Votre mot de passe ou mot de passe d'application
-#DEFAULT_FROM_EMAIL = 'noreply@votredomaine.com'
+DEFAULT_FROM_EMAIL = 'noreply@votredomaine.com'
 
 OPENWEATHER_API_KEY = 'f2e5a934bf6e77754ad4c5c1521c0f96'
 
