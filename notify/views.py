@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth.hashers import make_password
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 from .serializers import WeatherDataSerializer
 from .serializers import UserPreferencesSerializer
@@ -97,6 +99,20 @@ def get_authenticated_user(request):
     user = request.user
     serializer = UserSerializer(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    try:
+        refresh_token = request.data["refresh_token"]
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+    except Exception as e:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
